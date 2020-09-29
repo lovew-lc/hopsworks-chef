@@ -397,6 +397,16 @@ ruby_block "export_hadoop_classpath" do
   action :create
 end
 
+ruby_block "export_hadoop_classpath" do
+  block do
+    file = Chef::Util::FileEdit.new("/lib/systemd/system/glassfish-domain1.service")
+    new_line = "ExecStartPre=/bin/bash -c 'sleep 5 && if systemctl list-units --full -all | grep -Fq 'mysqld.service'; then systemctl is-active --quiet mysqld; fi'"
+    file.insert_line_if_no_match(/#{new_line}/, new_line)
+    file.write_file
+  end
+  action :create
+end
+
 hopsworks_grants "restart_glassfish" do
   action :reload_systemd
 end
@@ -489,7 +499,7 @@ glassfish_asadmin "create-http --default-virtual-server server https-internal" d
   username username
   admin_port admin_port
   secure false
-  not_if "#{asadmin} --user #{username} --passwordfile #{admin_pwd} | grep 'https-internal'"
+  not_if "#{asadmin} --user #{username} --passwordfile #{admin_pwd} get server.network-config.protocols.protocol.https-internal.* | grep 'http.version'"
 end
 
 glassfish_asadmin "create-network-listener --listenerport #{node['hopsworks']['internal']['port']} --threadpool http-thread-pool --target server --protocol https-internal https-int-list" do
@@ -499,6 +509,15 @@ glassfish_asadmin "create-network-listener --listenerport #{node['hopsworks']['i
   admin_port admin_port
   secure false
   not_if "#{asadmin} --user #{username} --passwordfile #{admin_pwd} list-http-listeners | grep 'https-int-list'"
+end
+
+glassfish_asadmin "create-managed-executor-service --enabled=true --longrunningtasks=true --corepoolsize=50 --maximumpoolsize=400 --keepaliveseconds=60 --taskqueuecapacity=20000 concurrent/condaExecutorService" do
+   domain_name domain_name
+   password_file "#{domains_dir}/#{domain_name}_admin_passwd"
+   username username
+   admin_port admin_port
+   secure false
+  not_if "#{asadmin} --user #{username} --passwordfile #{admin_pwd}  list-managed-executor-services | grep 'conda'"
 end
 
 glassfish_conf = {
@@ -526,6 +545,7 @@ glassfish_conf = {
   # Set correct thread-priority for the executor services - required during updates
   'resources.managed-executor-service.concurrent\/hopsExecutorService.thread-priority' => 10,
   'resources.managed-thread-factory.concurrent\/hopsThreadFactory.thread-priority' => 10,
+  'resources.managed-executor-service.concurrent\/condaExecutorService.thread-priority' => 9,
   # Enable Single Sign on
   'configs.config.server-config.http-service.virtual-server.server.sso-enabled' => true,
   'configs.config.server-config.http-service.virtual-server.server.sso-cookie-http-only' => true,
@@ -764,8 +784,14 @@ end
 node.override['glassfish']['asadmin']['timeout'] = 400
   
 if node['install']['enterprise']['install'].casecmp? "true" and exists_local("cloud", "default")
-  ear_name = (node['install']['kubernetes'].casecmp?("true") and node['install']['managed_kubernetes'].casecmp?("true")) ? "hopsworks-ear-cloud-kube.ear" : "hopsworks-ear-cloud.ear"
-  node.override['hopsworks']['ear_url'] = "#{node['hopsworks']['download_url']}/#{ear_name}"
+  unmanaged = false
+  if node.attribute? 'cloud' and node['cloud'].attribute? 'init' and node['cloud']['init'].attribute? 'config' and node['cloud']['init']['config'].attribute? 'unmanaged'
+    unmanaged = node['cloud']['init']['config']['unmanaged'].casecmp? 'true'
+  end
+  unless unmanaged
+    ear_name = (node['install']['kubernetes'].casecmp?("true") and node['install']['managed_kubernetes'].casecmp?("true")) ? "hopsworks-ear-cloud-kube.ear" : "hopsworks-ear-cloud.ear"
+    node.override['hopsworks']['ear_url'] = "#{node['hopsworks']['download_url']}/#{ear_name}"
+  end
 end
 
 glassfish_deployable "hopsworks-ear" do

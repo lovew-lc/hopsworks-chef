@@ -9,7 +9,7 @@ help() {
     exit 1
 }
 
-VALID_IMAGE_NAME='<%= node['hopsworks']['docker']['image-validation-regex'] %>'
+VALID_IMAGE_NAME='<%= node['conda']['docker']['image-validation-regex'] %>'
 if [ "$1" == "create" ] ; then
 
     # Sanity checks for injection attacks
@@ -26,19 +26,17 @@ if [ "$1" == "create" ] ; then
 
     docker push $3
 
+<% if node['install']['managed_docker_registry'] == "false" -%>
 elif [ "$1" == "delete" ] ; then
-    # Sanity checks for injection attacks
-    if ! [[ $2 =~ $VALID_IMAGE_NAME ]] ; then
-	echo "error: Not an image name $3" >&2
-	help
-    fi
+    # Remove tags from docker registry
+    docker exec registry rm -rf /var/lib/registry/docker/registry/v2/repositories/$2/_manifests/tags/$3
 
-    if [[ "$(docker images -q $2 2> /dev/null)" == "" ]]; then
-	exit 0
-    else
-	docker rmi -f $2
-    fi
+elif [ "$1" == "gc" ] ; then
+    # Run garbage collection for registry
+    docker exec registry bin/registry garbage-collect /etc/docker/registry/config.yml -m
     
+<% end -%>
+
 elif [ "$1" == "list" ] ; then
     if ! [[ $2 =~ $VALID_IMAGE_NAME ]] ; then
 	echo "error: Not an image name $2" >&2
@@ -52,7 +50,8 @@ elif [ "$1" == "export" ] ; then
 	echo "error: Not an image name $2" >&2
 	help
     fi
-    
+
+    docker pull $2 > /dev/null 2>&1
     docker run --rm $2 conda env export -n theenv
     
 else

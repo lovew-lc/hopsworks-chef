@@ -4,7 +4,7 @@ maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      "Installs/Configures HopsWorks, the UI for Hops Hadoop."
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "1.4.0"
+version          "2.0.0"
 source_url       "https://github.com/logicalclocks/hopsworks-chef"
 
 
@@ -840,7 +840,7 @@ attribute "hopsworks/jwt/signature_algorithm",
           :type => 'string'
 
 attribute "hopsworks/jwt/lifetime_ms",
-          :description => "Default lifetime in ms for jwt expiration. (default 1.4.000)",
+          :description => "Default lifetime in ms for jwt expiration. (default 2.0.000)",
           :type => 'string'
 
 attribute "hopsworks/jwt/exp_leeway_sec",
@@ -953,11 +953,12 @@ attribute "hopsworks/enable_metadata_designer",
           :description => "Enable metadata designer. 'false' (default)",
           :type => 'string'
 
-attribute "hopsworks/docker/image-validation-regex",
-          :description => "Validation regex for user/project Docker image name",
-          :type => 'string'
-
 # Expat
 attribute "hopsworks/expat_url",
           :description => "Url to download expat from",
           :type => 'string'
+
+#TensorBoard'
+attribute "tensorboard/max/reload/threads",
+          :description => "The max number of threads that TensorBoard can use to reload runs. Not relevant for db read-only mode. Each thread reloads one run at a time.",
+          :type => "string"

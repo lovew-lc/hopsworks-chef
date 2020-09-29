@@ -136,7 +136,7 @@ default['hopsworks']['hdfs_default_quota_mbs']           = "500000"
 default['hopsworks']['hive_default_quota_mbs']           = "250000"
 default['hopsworks']['featurestore_default_quota_mbs']   = "250000"
 default['hopsworks']['max_num_proj_per_user']            = "10"
-default['hopsworks']['reserved_project_names']           = "python27,python36,python37,python38,python39,hops-system,hopsworks,information_schema,airflow,glassfish_timers,grafana,hops,metastore,mysql,ndbinfo,performance_schema,sqoop,sys"
+default['hopsworks']['reserved_project_names']           = "hops-system,hopsworks,information_schema,airflow,glassfish_timers,grafana,hops,metastore,mysql,ndbinfo,performance_schema,sqoop,sys"
 
 # file preview and download
 default['hopsworks']['file_preview_image_size']  = "10000000"
@@ -255,6 +255,11 @@ default['jupyter']['origin_scheme']                    = "https"
 default['serving']['base_dir']                       = node['install']['dir'].empty? ? node['hopsworks']['dir'] + "/staging" : node['install']['dir'] + "/staging"
 default['serving']['pool_size']                      = "40"
 default['serving']['max_route_connections']          = "10"
+
+#
+# TensorBoard
+#
+default['tensorboard']['max']['reload']['threads']          = "1"
 
 #
 # PyPi
@@ -435,6 +440,3 @@ default['hopsworks']['hdfs']['storage_policy']['base']        = "DB"
 default['hopsworks']['hdfs']['storage_policy']['log']         = "HOT"
 
 default['hopsworks']['enable_metadata_designer']              = "false"
-
-# Regular expression to sanitize projects Docker images
-default['hopsworks']['docker']['image-validation-regex']      = "^([a-z0-9]+(-[a-z0-9]+)*\.)*[a-z0-9]+(:[0-9]*)?(\/([a-zA-Z0-9\-]*))?\/([-:._a-zA-Z0-9]{0,62}[-:.a-zA-Z0-9]$)"
